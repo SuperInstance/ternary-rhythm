@@ -1,0 +1,6 @@
+[package]
+name = "ternary-rhythm"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Temporal pattern recognition and generation using ternary time patterns"
