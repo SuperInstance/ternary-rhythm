@@ -1,73 +1,88 @@
 # ternary-rhythm
 
-**Temporal pattern recognition and generation. The pulse that drives everything.**
+**Temporal pattern recognition and generation using ternary time patterns**
 
-Rhythm is the most fundamental musical element. Before melody, before harmony, before timbre — there's rhythm. A pattern of hits and silences that marks time, creates expectation, and resolves it. In ternary, rhythm is a sequence of {-1, 0, +1}: accented (+1), silent (0), or unaccented/ghost (-1).
+[![ternary](https://img.shields.io/badge/ecosystem-ternary-blue)](https://github.com/orgs/SuperInstance/repositories?q=ternary)
+[![tests](https://img.shields.io/badge/tests-22-green)]()
 
-This crate provides a complete rhythm toolkit: pattern generation (from simple beats to Euclidean algorithms), pattern analysis (syncopation, density, swing), pattern transformation (rotate, invert, permute), and pattern classification (identify the meter, the feel, the genre).
+## Overview
 
-## What's Inside
+Temporal pattern recognition and generation using ternary time patterns.
 
-- **`RhythmPattern`** — a sequence of {-1, 0, +1} values representing a rhythmic cycle
-- **`euclidean(k, n)`** — Björklund's algorithm: distribute k hits as evenly as possible in n steps. The math behind every classic rhythm
-- **`generate_meter(beats, subdivisions)`** — generate patterns for common meters (4/4, 3/4, 6/8, 7/8)
-- **`syncopation(pattern)`** — measure how "off-beat" the pattern is. High syncopation = jazz/funk, low = march/polka
-- **`density(pattern)`** — fraction of non-zero values. Sparse (0.2) = minimal techno, dense (0.8) = drum & bass
-- **`swing(pattern, amount)`** — apply swing/shuffle timing. 0 = straight, 1 = full triplet swing
-- **`rotate_beats(pattern, shift)`** — shift the pattern by N beats. New feel, same rhythm
-- **`classify(pattern)`** — identify the meter and feel: 4/4 straight, 3/4 waltz, 6/8 shuffle, etc.
+Provides rhythm structures, metronomes, polyrhythms, syncopation detection,
+groove analysis, and rhythmic evolution for ternary-valued temporal coordination.
 
-## Quick Example
+## Architecture
 
-```rust
-use ternary_rhythm::*;
+- **`Rhythm`** — core data structure
+- **`Metronome`** — core data structure
+- **`Polyrhythm`** — core data structure
+- **`Syncopation`** — core data structure
+- **`Groove`** — core data structure
+- **`RhythmEvolver`** — core data structure
+- **`Ternary`** — state enumeration
 
-// Euclidean rhythm: 5 beats in 8 steps (bossa nova)
-let bossa = euclidean(5, 8);
-// [1, 0, 1, 1, 0, 1, 1, 0]
+### Key Functions
 
-// Classic 4/4 rock beat
-let rock = generate_meter(4, 4);
-// [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+- `from_i8()`
+- `to_i8()`
+- `random()`
+- `new()`
+- `len()`
+- `is_empty()`
+- `tick()`
+- `current()`
+- `reset()`
+- `density()`
+- ... and 24 more
 
-// Measure syncopation
-let offbeat = RhythmPattern::new(vec![0, 1, 0, 1, 0, 1, 0, 1]);
-let onbeat = RhythmPattern::new(vec![1, 0, 1, 0, 1, 0, 1, 0]);
-println!("Offbeat syncopation: {:.2}", syncopation(&offbeat)); // high
-println!("Onbeat syncopation: {:.2}", syncopation(&onbeat));   // low
+## Why Ternary?
 
-// Apply swing
-let swung = swing(&rock, 0.6);
-// Off-beat hits shift later — the feel changes completely
+The balanced ternary system {-1, 0, +1} (also known as Z₃) is the mathematically optimal discrete encoding:
+- **More expressive than binary**: three states capture positive, neutral, and negative
+- **Natural for decisions**: accept/reject/abstain, buy/hold/sell, agree/disagree/neutral
+- **Self-balancing**: the 0 state acts as a universal screen, preventing pathological lock-in
+- **Z₃ cyclic dynamics**: rock-paper-scissors is the only natural coordination mechanism
+
+## Stats
+
+| Metric | Value |
+|--------|-------|
+| Lines of Rust | 612 |
+| Test count | 22 |
+| Public types | 7 |
+| Public functions | 34 |
+
+## Ecosystem
+
+This crate is part of the **[SuperInstance Ternary Fleet](https://github.com/orgs/SuperInstance/repositories?q=ternary)**:
+
+- **[ternary-core](https://github.com/SuperInstance/ternary-core)** — shared traits and Z₃ arithmetic
+- **[ternary-grid](https://github.com/SuperInstance/ternary-grid)** — spatial grid with {-1, 0, +1} cells
+- **[ternary-graph](https://github.com/SuperInstance/ternary-graph)** — ternary-weighted graph algorithms
+- **[ternary-automata](https://github.com/SuperInstance/ternary-automata)** — three-state cellular automata
+- **[ternary-compiler](https://github.com/SuperInstance/ternary-compiler)** — expression compiler and optimizer
+
+200+ crates. 4,300+ tests. One pattern.
+
+## Research Context
+
+The ternary approach connects to several active research areas:
+- **Ternary Neural Networks** (TNNs): weights constrained to {-1, 0, +1} for efficient inference
+- **Huawei's ternary chip**: 7nm ternary silicon with 60% less power consumption
+- **Active inference**: free energy minimization naturally maps to ternary action selection
+- **Cyclic dominance**: RPS dynamics maintain biodiversity in spatial ecology
+- **Z₃ group theory**: the only algebraic group on three elements is cyclic addition mod 3
+
+## Usage
+
+```toml
+[dependencies]
+ternary-rhythm = "0.1.0"
 ```
 
-## The Deeper Truth
-
-**Euclidean rhythms are mathematically optimal.** Björklund's algorithm distributes k hits in n steps as evenly as possible — and the result is almost every important rhythm in world music. E(3,8) = Cuban tresillo. E(5,8) = bossa nova. E(7,12) = West African bell pattern. E(2,3) = every waltz ever. The algorithm doesn't know about music — it just distributes things evenly — and yet it produces the rhythms that cultures around the world independently discovered. There's a deep connection between mathematical evenness and musical satisfaction.
-
-The ternary dimension adds accent levels: +1 = downbeat (the ONE), 0 = silence, -1 = ghost note (quiet hit that fills the space). Ghost notes are what separates a stiff drum machine from a living drummer. They're the whispers between the shouts — felt more than heard. In ternary, they're the -1 values that give the rhythm its *feel* rather than just its *pattern*.
-
-**Use cases:**
-- **Algorithmic composition** — generate rhythm patterns from mathematical rules
-- **Drum machines** — the Euclidean algorithm IS the drum machine
-- **Music education** — teach rhythm theory with the simplest possible representation
-- **Game audio** — adaptive rhythm that responds to gameplay
-- **Dance** — rhythm generation for choreography
-
-## See Also
-
-- **ternary-polyrhythm** — multiple rhythms playing simultaneously
-- **ternary-tempo** — how fast the rhythm plays (BPM)
-- **ternary-fib** — period-8 as the natural ternary rhythm
-- **ternary-jam** — rhythmic improvisation in a jam session
-- **ternary-sync** — Z₃ synchronization (when rhythms lock in)
-- **ternary-phase** — phase relationships between rhythmic layers
-- **ternary-ear** — rhythm recognition training
-
-## Install
-
-```bash
-cargo add ternary-rhythm
+```rust
+use ternary_rhythm;
 ```
 
 ## License
