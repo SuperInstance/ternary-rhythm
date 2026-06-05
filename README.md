@@ -1,92 +1,74 @@
-# ternary-rhythm — Temporal pattern recognition and generation
+# ternary-rhythm
 
-Rhythm struct, metronome, polyrhythm, syncopation detection, groove analysis, and rhythmic evolution for ternary time patterns. Every beat is {-1, 0, +1}.
+**Temporal pattern recognition and generation. The pulse that drives everything.**
 
-## Why This Exists
+Rhythm is the most fundamental musical element. Before melody, before harmony, before timbre — there's rhythm. A pattern of hits and silences that marks time, creates expectation, and resolves it. In ternary, rhythm is a sequence of {-1, 0, +1}: accented (+1), silent (0), or unaccented/ghost (-1).
 
-Ternary agents need temporal coordination — not just spatial or logical reasoning. Time is fundamental to music, speech, biological cycles, and any system that acts periodically. This crate provides ternary-valued rhythm structures where Pos means "onset/accent", Neg means "anti-onset/rest", and Zero means "silent/unmarked" — enabling pattern recognition, generation, and evolution of temporal structures.
+This crate provides a complete rhythm toolkit: pattern generation (from simple beats to Euclidean algorithms), pattern analysis (syncopation, density, swing), pattern transformation (rotate, invert, permute), and pattern classification (identify the meter, the feel, the genre).
 
-## Core Concepts
+## What's Inside
 
-- **Balanced ternary** — Three values: Neg (-1), Zero (0), Pos (+1). In rhythms, Pos = onset, Neg = anti-onset (off-beat emphasis), Zero = silence.
-- **Rhythm** — A repeating ternary pattern with a playback cursor. `tick()` advances and returns the current value. Supports density, balance, reversal, and rotation.
-- **Metronome** — A steady beat generator with configurable accent pattern. First beat is accented by default.
-- **Polyrhythm** — Multiple simultaneous rhythms with independent lengths. The full cycle repeats at the LCM of all rhythm lengths (e.g., 4-beat and 6-beat → 12-tick cycle).
-- **Syncopation** — Off-beat emphasis. Measured as the fraction of events on weak positions. Can also create syncopated versions by shifting onsets.
-- **Groove** — The "feel" of a rhythm. Analyzed through swing ratio (long-short interval alternation), intensity (density + syncopation), and regularity (how evenly spaced the onsets are).
-- **RhythmEvolver** — Genetic evolution of rhythms: fitness rewards moderate density and high regularity. Uses crossover and mutation to breed better patterns.
+- **`RhythmPattern`** — a sequence of {-1, 0, +1} values representing a rhythmic cycle
+- **`euclidean(k, n)`** — Björklund's algorithm: distribute k hits as evenly as possible in n steps. The math behind every classic rhythm
+- **`generate_meter(beats, subdivisions)`** — generate patterns for common meters (4/4, 3/4, 6/8, 7/8)
+- **`syncopation(pattern)`** — measure how "off-beat" the pattern is. High syncopation = jazz/funk, low = march/polka
+- **`density(pattern)`** — fraction of non-zero values. Sparse (0.2) = minimal techno, dense (0.8) = drum & bass
+- **`swing(pattern, amount)`** — apply swing/shuffle timing. 0 = straight, 1 = full triplet swing
+- **`rotate_beats(pattern, shift)`** — shift the pattern by N beats. New feel, same rhythm
+- **`classify(pattern)`** — identify the meter and feel: 4/4 straight, 3/4 waltz, 6/8 shuffle, etc.
 
-## Quick Start
-
-```toml
-[dependencies]
-ternary-rhythm = "0.1"
-```
+## Quick Example
 
 ```rust
 use ternary_rhythm::*;
 
-// Create a ternary rhythm
-let mut rhythm = Rhythm::new(vec![
-    Ternary::Pos, Ternary::Zero, Ternary::Neg, Ternary::Zero,
-]);
+// Euclidean rhythm: 5 beats in 8 steps (bossa nova)
+let bossa = euclidean(5, 8);
+// [1, 0, 1, 1, 0, 1, 1, 0]
 
-// Tick through the pattern
-assert_eq!(rhythm.tick(), Ternary::Pos);
-assert_eq!(rhythm.tick(), Ternary::Zero);
+// Classic 4/4 rock beat
+let rock = generate_meter(4, 4);
+// [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 
-// Build a polyrhythm (3 against 4)
-let mut poly = Polyrhythm::new(vec![
-    Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Zero]),
-    Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero]),
-]);
-let both = poly.tick(); // [Pos, Pos]
-assert_eq!(poly.cycle_length(), 12); // LCM(3, 4) = 12
+// Measure syncopation
+let offbeat = RhythmPattern::new(vec![0, 1, 0, 1, 0, 1, 0, 1]);
+let onbeat = RhythmPattern::new(vec![1, 0, 1, 0, 1, 0, 1, 0]);
+println!("Offbeat syncopation: {:.2}", syncopation(&offbeat)); // high
+println!("Onbeat syncopation: {:.2}", syncopation(&onbeat));   // low
 
-// Analyze groove
-let groove = Groove::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero]);
-println!("Regularity: {:.2}", groove.regularity());
-println!("Intensity: {:.2}", groove.intensity());
+// Apply swing
+let swung = swing(&rock, 0.6);
+// Off-beat hits shift later — the feel changes completely
 ```
 
-## API Overview
+## The Deeper Truth
 
-| Type | Purpose |
-|------|---------|
-| `Ternary` | Core value: Neg (-1), Zero (0), Pos (+1) |
-| `Rhythm` | Repeating ternary time pattern with playback cursor |
-| `Metronome` | Steady beat generator with configurable accents |
-| `Polyrhythm` | Multiple simultaneous rhythms, cycling at LCM |
-| `Syncopation` | Off-beat measurement and syncopation creation |
-| `Groove` | Swing ratio, intensity, and regularity analysis |
-| `RhythmEvolver` | Genetic evolution of rhythmic patterns |
+**Euclidean rhythms are mathematically optimal.** Björklund's algorithm distributes k hits in n steps as evenly as possible — and the result is almost every important rhythm in world music. E(3,8) = Cuban tresillo. E(5,8) = bossa nova. E(7,12) = West African bell pattern. E(2,3) = every waltz ever. The algorithm doesn't know about music — it just distributes things evenly — and yet it produces the rhythms that cultures around the world independently discovered. There's a deep connection between mathematical evenness and musical satisfaction.
 
-## How It Works
+The ternary dimension adds accent levels: +1 = downbeat (the ONE), 0 = silence, -1 = ghost note (quiet hit that fills the space). Ghost notes are what separates a stiff drum machine from a living drummer. They're the whispers between the shouts — felt more than heard. In ternary, they're the -1 values that give the rhythm its *feel* rather than just its *pattern*.
 
-Rhythms are flat arrays of ternary values with a circular cursor. Each `tick()` returns the current value and advances. Polyrhythms combine multiple rhythms — since they have different lengths, the full pattern repeats at the LCM of all lengths, creating the characteristic interlocking patterns of real polyrhythms.
+**Use cases:**
+- **Algorithmic composition** — generate rhythm patterns from mathematical rules
+- **Drum machines** — the Euclidean algorithm IS the drum machine
+- **Music education** — teach rhythm theory with the simplest possible representation
+- **Game audio** — adaptive rhythm that responds to gameplay
+- **Dance** — rhythm generation for choreography
 
-Groove analysis is purely interval-based: it measures the intervals between onsets and computes statistics. Swing ratio compares alternating long/short intervals (a swing feel has ratio > 1.0). Regularity is the inverse of the coefficient of variation of intervals.
+## See Also
 
-Evolution uses a simple genetic algorithm: fitness rewards rhythms with density near 0.5 and high regularity. Top-half survive, breed via midpoint crossover, and mutate by randomly flipping positions.
+- **ternary-polyrhythm** — multiple rhythms playing simultaneously
+- **ternary-tempo** — how fast the rhythm plays (BPM)
+- **ternary-fib** — period-8 as the natural ternary rhythm
+- **ternary-jam** — rhythmic improvisation in a jam session
+- **ternary-sync** — Z₃ synchronization (when rhythms lock in)
+- **ternary-phase** — phase relationships between rhythmic layers
+- **ternary-ear** — rhythm recognition training
 
-## Known Limitations
+## Install
 
-- **No time signature awareness** — Patterns don't know about meters (4/4, 3/4). Metrical structure must be managed externally.
-- **Discrete time only** — No fractional tick positions. Everything is integer-indexed.
-- **Simple PRNG** — Uses a linear congruential generator. Not suitable for cryptographic purposes.
-- **Groove analysis assumes monophonic** — Swing and regularity assume a single voice. Multiple simultaneous onsets confuse interval tracking.
-- **Fitness is opinionated** — The built-in fitness function prefers moderate density and high regularity. Unusual aesthetics (very sparse, very irregular) score poorly.
-- **No velocity** — Ternary values are discrete. No continuous dynamics (loud/soft).
-
-## Use Cases
-
-1. **Musical pattern generation** — Create and evolve ternary rhythm patterns for music applications, using polyrhythms for complex textures.
-2. **Temporal agent coordination** — Synchronize ternary agents to shared temporal patterns, with metronomes providing master clocks.
-3. **Biological cycle modeling** — Represent circadian or other periodic biological rhythms as ternary patterns (active/rest/neutral phases).
-
-## Ecosystem Context
-
-Part of the SuperInstance ternary crate family. `ternary-rhythm` connects to `ternary-music` for musical applications and `ternary-tidelight` for tidal/scheduling integration. It provides the temporal backbone that `ternary-agent` can use for periodic behavior and `ternary-scheduling` can use for time-based coordination.
+```bash
+cargo add ternary-rhythm
+```
 
 ## License
 
