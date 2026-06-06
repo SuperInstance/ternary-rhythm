@@ -5,34 +5,38 @@
 //! Provides rhythm structures, metronomes, polyrhythms, syncopation detection,
 //! groove analysis, and rhythmic evolution for ternary-valued temporal coordination.
 
-/// Ternary value: -1, 0, +1.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Ternary {
-    Neg = -1,
-    Zero = 0,
-    Pos = 1,
+/// Canonical ternary type re-exported from `ternary-types`.
+pub use ternary_types::Ternary;
+
+/// Extension trait providing methods previously on the custom `Ternary` type.
+pub trait TernaryExt {
+    /// Create a `Ternary` from an `i8` value (-1, 0, or 1).
+    fn from_i8(v: i8) -> Option<Self>
+    where
+        Self: Sized;
+    /// Return the `i8` value of this ternary state.
+    fn to_i8(self) -> i8;
+    /// Generate a random `Ternary` value using a simple LCG.
+    fn random(seed: &mut u64) -> Self
+    where
+        Self: Sized;
 }
 
-impl Ternary {
-    pub fn from_i8(v: i8) -> Option<Self> {
-        match v {
-            -1 => Some(Ternary::Neg),
-            0 => Some(Ternary::Zero),
-            1 => Some(Ternary::Pos),
-            _ => None,
-        }
+impl TernaryExt for ternary_types::Ternary {
+    fn from_i8(v: i8) -> Option<Self> {
+        Self::try_from(v).ok()
     }
 
-    pub fn to_i8(self) -> i8 {
-        self as i8
+    fn to_i8(self) -> i8 {
+        i8::from(self)
     }
 
-    pub fn random(seed: &mut u64) -> Self {
+    fn random(seed: &mut u64) -> Self {
         *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
         match (*seed % 3) as i8 {
-            0 => Ternary::Neg,
-            1 => Ternary::Zero,
-            _ => Ternary::Pos,
+            0 => Ternary::Negative,
+            1 => Ternary::Neutral,
+            _ => Ternary::Positive,
         }
     }
 }
@@ -62,7 +66,7 @@ impl Rhythm {
 
     /// Advance one tick and return the current value.
     pub fn tick(&mut self) -> Ternary {
-        if self.pattern.is_empty() { return Ternary::Zero; }
+        if self.pattern.is_empty() { return Ternary::Neutral; }
         let val = self.pattern[self.position];
         self.position = (self.position + 1) % self.pattern.len();
         val
@@ -70,7 +74,7 @@ impl Rhythm {
 
     /// Peek at current value without advancing.
     pub fn current(&self) -> Ternary {
-        if self.pattern.is_empty() { Ternary::Zero } else { self.pattern[self.position] }
+        if self.pattern.is_empty() { Ternary::Neutral } else { self.pattern[self.position] }
     }
 
     /// Reset to beginning.
@@ -81,15 +85,15 @@ impl Rhythm {
     /// Density: fraction of non-zero elements.
     pub fn density(&self) -> f64 {
         if self.pattern.is_empty() { return 0.0; }
-        let non_zero = self.pattern.iter().filter(|&&v| v != Ternary::Zero).count();
+        let non_zero = self.pattern.iter().filter(|&&v| v != Ternary::Neutral).count();
         non_zero as f64 / self.pattern.len() as f64
     }
 
     /// Balance: ratio of positive to negative values.
     /// Returns (pos_count, neg_count).
     pub fn balance(&self) -> (usize, usize) {
-        let pos = self.pattern.iter().filter(|&&v| v == Ternary::Pos).count();
-        let neg = self.pattern.iter().filter(|&&v| v == Ternary::Neg).count();
+        let pos = self.pattern.iter().filter(|&&v| v == Ternary::Positive).count();
+        let neg = self.pattern.iter().filter(|&&v| v == Ternary::Negative).count();
         (pos, neg)
     }
 
@@ -121,8 +125,8 @@ pub struct Metronome {
 
 impl Metronome {
     pub fn new(beats: usize) -> Self {
-        let mut accents = vec![Ternary::Zero; beats];
-        if beats > 0 { accents[0] = Ternary::Pos; } // accent first beat
+        let mut accents = vec![Ternary::Neutral; beats];
+        if beats > 0 { accents[0] = Ternary::Positive; } // accent first beat
         Self { beats, position: 0, accents }
     }
 
@@ -130,13 +134,13 @@ impl Metronome {
     pub fn set_accents(&mut self, accents: Vec<Ternary>) {
         self.accents = accents;
         // Pad or truncate to match beats
-        self.accents.resize(self.beats, Ternary::Zero);
+        self.accents.resize(self.beats, Ternary::Neutral);
     }
 
     /// Tick forward one beat.
     pub fn tick(&mut self) -> Ternary {
-        if self.beats == 0 { return Ternary::Zero; }
-        let val = if self.position < self.accents.len() { self.accents[self.position] } else { Ternary::Zero };
+        if self.beats == 0 { return Ternary::Neutral; }
+        let val = if self.position < self.accents.len() { self.accents[self.position] } else { Ternary::Neutral };
         self.position = (self.position + 1) % self.beats;
         val
     }
@@ -225,7 +229,7 @@ impl Syncopation {
             let is_strong = strong_positions.contains(&i);
             let val = pattern[i];
             // Syncopation: weak position has event, strong doesn't
-            if !is_strong && val != Ternary::Zero {
+            if !is_strong && val != Ternary::Neutral {
                 syncopated += 1;
             }
             total += 1;
@@ -235,9 +239,9 @@ impl Syncopation {
 
     /// Create a syncopated version by shifting onsets to off-beats.
     pub fn syncopate(pattern: &[Ternary], shift: usize) -> Vec<Ternary> {
-        let mut result = vec![Ternary::Zero; pattern.len()];
+        let mut result = vec![Ternary::Neutral; pattern.len()];
         for i in 0..pattern.len() {
-            if pattern[i] != Ternary::Zero {
+            if pattern[i] != Ternary::Neutral {
                 let new_pos = (i + shift) % pattern.len();
                 result[new_pos] = pattern[i];
             }
@@ -264,7 +268,7 @@ impl Groove {
         let mut intervals = Vec::new();
         let mut last_onset = None;
         for (i, &v) in self.pattern.iter().enumerate() {
-            if v != Ternary::Zero {
+            if v != Ternary::Neutral {
                 if let Some(last) = last_onset {
                     intervals.push(i - last);
                 }
@@ -292,7 +296,7 @@ impl Groove {
     /// Groove intensity: combination of syncopation and density.
     pub fn intensity(&self) -> f64 {
         let density = if self.pattern.is_empty() { 0.0 } else {
-            self.pattern.iter().filter(|&&v| v != Ternary::Zero).count() as f64 / self.pattern.len() as f64
+            self.pattern.iter().filter(|&&v| v != Ternary::Neutral).count() as f64 / self.pattern.len() as f64
         };
         let strong: Vec<usize> = (0..self.pattern.len()).step_by(2).collect();
         let sync = Syncopation::measure(&self.pattern, &strong);
@@ -304,7 +308,7 @@ impl Groove {
         let mut intervals = Vec::new();
         let mut last = None;
         for (i, &v) in self.pattern.iter().enumerate() {
-            if v != Ternary::Zero {
+            if v != Ternary::Neutral {
                 if let Some(l) = last {
                     intervals.push(i - l);
                 }
@@ -419,50 +423,50 @@ mod tests {
 
     #[test]
     fn test_rhythm_tick() {
-        let mut r = Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Neg]);
-        assert_eq!(r.tick(), Ternary::Pos);
-        assert_eq!(r.tick(), Ternary::Zero);
-        assert_eq!(r.tick(), Ternary::Neg);
-        assert_eq!(r.tick(), Ternary::Pos); // wraps
+        let mut r = Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Negative]);
+        assert_eq!(r.tick(), Ternary::Positive);
+        assert_eq!(r.tick(), Ternary::Neutral);
+        assert_eq!(r.tick(), Ternary::Negative);
+        assert_eq!(r.tick(), Ternary::Positive); // wraps
     }
 
     #[test]
     fn test_rhythm_density() {
-        let r = Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Neg, Ternary::Zero]);
+        let r = Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Negative, Ternary::Neutral]);
         assert!((r.density() - 0.5).abs() < 0.01);
     }
 
     #[test]
     fn test_rhythm_balance() {
-        let r = Rhythm::new(vec![Ternary::Pos, Ternary::Pos, Ternary::Neg, Ternary::Zero]);
+        let r = Rhythm::new(vec![Ternary::Positive, Ternary::Positive, Ternary::Negative, Ternary::Neutral]);
         assert_eq!(r.balance(), (2, 1));
     }
 
     #[test]
     fn test_rhythm_reverse() {
-        let mut r = Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Neg]);
+        let mut r = Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Negative]);
         r.reverse();
-        assert_eq!(r.pattern, vec![Ternary::Neg, Ternary::Zero, Ternary::Pos]);
+        assert_eq!(r.pattern, vec![Ternary::Negative, Ternary::Neutral, Ternary::Positive]);
     }
 
     #[test]
     fn test_rhythm_rotate() {
-        let mut r = Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Neg]);
+        let mut r = Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Negative]);
         r.rotate(1);
-        assert_eq!(r.pattern, vec![Ternary::Neg, Ternary::Pos, Ternary::Zero]);
+        assert_eq!(r.pattern, vec![Ternary::Negative, Ternary::Positive, Ternary::Neutral]);
     }
 
     #[test]
     fn test_rhythm_empty() {
         let mut r = Rhythm::new(vec![]);
-        assert_eq!(r.tick(), Ternary::Zero);
+        assert_eq!(r.tick(), Ternary::Neutral);
         assert!(r.is_empty());
         assert_eq!(r.density(), 0.0);
     }
 
     #[test]
     fn test_rhythm_reset() {
-        let mut r = Rhythm::new(vec![Ternary::Pos, Ternary::Neg]);
+        let mut r = Rhythm::new(vec![Ternary::Positive, Ternary::Negative]);
         r.tick();
         r.tick();
         r.reset();
@@ -472,20 +476,20 @@ mod tests {
     #[test]
     fn test_metronome_tick() {
         let mut m = Metronome::new(4);
-        assert_eq!(m.tick(), Ternary::Pos); // first beat accented
-        assert_eq!(m.tick(), Ternary::Zero);
-        assert_eq!(m.tick(), Ternary::Zero);
-        assert_eq!(m.tick(), Ternary::Zero);
+        assert_eq!(m.tick(), Ternary::Positive); // first beat accented
+        assert_eq!(m.tick(), Ternary::Neutral);
+        assert_eq!(m.tick(), Ternary::Neutral);
+        assert_eq!(m.tick(), Ternary::Neutral);
         assert!(m.is_downbeat()); // back to start
     }
 
     #[test]
     fn test_metronome_custom_accents() {
         let mut m = Metronome::new(3);
-        m.set_accents(vec![Ternary::Pos, Ternary::Pos, Ternary::Pos]);
-        assert_eq!(m.tick(), Ternary::Pos);
-        assert_eq!(m.tick(), Ternary::Pos);
-        assert_eq!(m.tick(), Ternary::Pos);
+        m.set_accents(vec![Ternary::Positive, Ternary::Positive, Ternary::Positive]);
+        assert_eq!(m.tick(), Ternary::Positive);
+        assert_eq!(m.tick(), Ternary::Positive);
+        assert_eq!(m.tick(), Ternary::Positive);
     }
 
     #[test]
@@ -500,18 +504,18 @@ mod tests {
     #[test]
     fn test_polyrhythm_tick() {
         let mut p = Polyrhythm::new(vec![
-            Rhythm::new(vec![Ternary::Pos, Ternary::Zero]),
-            Rhythm::new(vec![Ternary::Neg, Ternary::Zero, Ternary::Zero]),
+            Rhythm::new(vec![Ternary::Positive, Ternary::Neutral]),
+            Rhythm::new(vec![Ternary::Negative, Ternary::Neutral, Ternary::Neutral]),
         ]);
         let vals = p.tick();
-        assert_eq!(vals, vec![Ternary::Pos, Ternary::Neg]);
+        assert_eq!(vals, vec![Ternary::Positive, Ternary::Negative]);
     }
 
     #[test]
     fn test_polyrhythm_cycle_length() {
         let p = Polyrhythm::new(vec![
-            Rhythm::new(vec![Ternary::Zero; 4]),
-            Rhythm::new(vec![Ternary::Zero; 6]),
+            Rhythm::new(vec![Ternary::Neutral; 4]),
+            Rhythm::new(vec![Ternary::Neutral; 6]),
         ]);
         assert_eq!(p.cycle_length(), 12); // LCM(4,6) = 12
     }
@@ -519,9 +523,9 @@ mod tests {
     #[test]
     fn test_polyrhythm_voice_count() {
         let p = Polyrhythm::new(vec![
-            Rhythm::new(vec![Ternary::Zero]),
-            Rhythm::new(vec![Ternary::Zero]),
-            Rhythm::new(vec![Ternary::Zero]),
+            Rhythm::new(vec![Ternary::Neutral]),
+            Rhythm::new(vec![Ternary::Neutral]),
+            Rhythm::new(vec![Ternary::Neutral]),
         ]);
         assert_eq!(p.voice_count(), 3);
     }
@@ -529,28 +533,28 @@ mod tests {
     #[test]
     fn test_syncopation_measure() {
         // All on strong beats → low syncopation
-        let pattern = vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero];
+        let pattern = vec![Ternary::Positive, Ternary::Neutral, Ternary::Positive, Ternary::Neutral];
         let strong = vec![0, 2];
         let sync = Syncopation::measure(&pattern, &strong);
         assert_eq!(sync, 0.0); // no off-beat events
 
         // All on weak beats → high syncopation
-        let pattern2 = vec![Ternary::Zero, Ternary::Pos, Ternary::Zero, Ternary::Pos];
+        let pattern2 = vec![Ternary::Neutral, Ternary::Positive, Ternary::Neutral, Ternary::Positive];
         let sync2 = Syncopation::measure(&pattern2, &strong);
         assert!(sync2 > 0.0);
     }
 
     #[test]
     fn test_syncopation_create() {
-        let pattern = vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero];
+        let pattern = vec![Ternary::Positive, Ternary::Neutral, Ternary::Positive, Ternary::Neutral];
         let syncopated = Syncopation::syncopate(&pattern, 1);
-        assert_eq!(syncopated, vec![Ternary::Zero, Ternary::Pos, Ternary::Zero, Ternary::Pos]);
+        assert_eq!(syncopated, vec![Ternary::Neutral, Ternary::Positive, Ternary::Neutral, Ternary::Positive]);
     }
 
     #[test]
     fn test_groove_swing_ratio() {
         // Regular pattern: swing = 1.0
-        let g = Groove::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero]);
+        let g = Groove::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Positive, Ternary::Neutral]);
         let swing = g.swing_ratio();
         assert!((swing - 1.0).abs() < 0.01);
     }
@@ -558,7 +562,7 @@ mod tests {
     #[test]
     fn test_groove_intensity() {
         // Dense syncopated → high intensity
-        let g = Groove::new(vec![Ternary::Zero, Ternary::Pos, Ternary::Zero, Ternary::Pos]);
+        let g = Groove::new(vec![Ternary::Neutral, Ternary::Positive, Ternary::Neutral, Ternary::Positive]);
         let intensity = g.intensity();
         assert!(intensity > 0.0);
     }
@@ -566,36 +570,36 @@ mod tests {
     #[test]
     fn test_groove_regularity() {
         // Perfectly regular: onset every 2
-        let g = Groove::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero]);
+        let g = Groove::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Positive, Ternary::Neutral]);
         let reg = g.regularity();
         assert!(reg > 0.9);
     }
 
     #[test]
     fn test_rhythm_evolver_fitness() {
-        let r = Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Pos, Ternary::Zero]);
+        let r = Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Positive, Ternary::Neutral]);
         let f = RhythmEvolver::fitness(&r);
         assert!(f > 0.0);
     }
 
     #[test]
     fn test_rhythm_evolver_crossover() {
-        let a = Rhythm::new(vec![Ternary::Pos, Ternary::Pos, Ternary::Pos, Ternary::Pos]);
-        let b = Rhythm::new(vec![Ternary::Neg, Ternary::Neg, Ternary::Neg, Ternary::Neg]);
+        let a = Rhythm::new(vec![Ternary::Positive, Ternary::Positive, Ternary::Positive, Ternary::Positive]);
+        let b = Rhythm::new(vec![Ternary::Negative, Ternary::Negative, Ternary::Negative, Ternary::Negative]);
         let child = RhythmEvolver::crossover(&a, &b);
         assert_eq!(child.len(), 4);
         // First half from a, second from b
-        assert_eq!(child.pattern[0], Ternary::Pos);
-        assert_eq!(child.pattern[3], Ternary::Neg);
+        assert_eq!(child.pattern[0], Ternary::Positive);
+        assert_eq!(child.pattern[3], Ternary::Negative);
     }
 
     #[test]
     fn test_rhythm_evolver_evolve() {
         let pop = vec![
-            Rhythm::new(vec![Ternary::Pos, Ternary::Zero, Ternary::Neg, Ternary::Zero]),
-            Rhythm::new(vec![Ternary::Neg, Ternary::Pos, Ternary::Zero, Ternary::Neg]),
-            Rhythm::new(vec![Ternary::Zero, Ternary::Pos, Ternary::Zero, Ternary::Pos]),
-            Rhythm::new(vec![Ternary::Pos, Ternary::Neg, Ternary::Pos, Ternary::Neg]),
+            Rhythm::new(vec![Ternary::Positive, Ternary::Neutral, Ternary::Negative, Ternary::Neutral]),
+            Rhythm::new(vec![Ternary::Negative, Ternary::Positive, Ternary::Neutral, Ternary::Negative]),
+            Rhythm::new(vec![Ternary::Neutral, Ternary::Positive, Ternary::Neutral, Ternary::Positive]),
+            Rhythm::new(vec![Ternary::Positive, Ternary::Negative, Ternary::Positive, Ternary::Negative]),
         ];
         let mut evolver = RhythmEvolver::new(pop, 100, 42);
         let best = evolver.evolve();
