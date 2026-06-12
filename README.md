@@ -1,6 +1,11 @@
 # ternary-rhythm
 
+[![MIDI Tensor](https://img.shields.io/badge/MIDI-Tensor--Enabled-8B0000?style=flat)](../prototypes/README.md)
+[![Rhythm Engine](https://img.shields.io/badge/Rhythm-Ternary-FF69B4?style=flat)](.)
+
 **Temporal pattern recognition and generation. The pulse that drives everything.**
+
+Temporal pattern recognition and generation using ternary time — rhythm structures, metronomes, polyrhythms, syncopation detection, groove analysis, and rhythmic evolution for ternary-valued temporal coordination.
 
 Rhythm is the most fundamental musical element. Before melody, before harmony, before timbre — there's rhythm. A pattern of hits and silences that marks time, creates expectation, and resolves it. In ternary, rhythm is a sequence of {-1, 0, +1}: accented (+1), silent (0), or unaccented/ghost (-1).
 
