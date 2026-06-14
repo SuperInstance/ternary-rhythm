@@ -859,4 +859,55 @@ mod tests {
         assert_eq!(lcm_value(4, 6), 12);
         assert_eq!(lcm_value(0, 5), 0);
     }
+
+    // ── Euclidean ──────────────────────────────────────────────────
+    #[test] fn test_euclidean_single() { assert_eq!(euclidean(1, 4), vec![Positive, Neutral, Neutral, Neutral]); }
+    #[test] fn test_euclidean_tresillo() { assert_eq!(euclidean(3, 8), vec![Positive, Neutral, Neutral, Positive, Neutral, Neutral, Positive, Neutral]); }
+    #[test] fn test_euclidean_bossa_nova() { assert_eq!(euclidean(5, 8), vec![Positive, Neutral, Positive, Positive, Neutral, Positive, Positive, Neutral]); }
+    #[test] fn test_euclidean_waltz() { assert_eq!(euclidean(2, 3), vec![Positive, Neutral, Positive]); }
+    #[test] fn test_euclidean_fill() { let e = euclidean(8, 8); assert!(e.iter().all(|&v| v == Positive)); }
+    #[test] fn test_euclidean_empty() { let e = euclidean(0, 8); assert!(e.iter().all(|&v| v == Neutral)); }
+    #[test] fn test_euclidean_afro7() { let e = euclidean(7, 12); assert_eq!(e.iter().filter(|&&v| v == Positive).count(), 7); }
+    #[test] fn test_euclidean_rhumba() { assert_eq!(euclidean(4, 8).iter().filter(|&&v| v == Positive).count(), 4); }
+
+    // ── Meter ──────────────────────────────────────────────────────
+    #[test] fn test_meter_4_4() { let p = generate_meter(4, 4); assert_eq!(p.len(), 16); assert_eq!(p[0], Positive); assert_eq!(p[8], Positive); }
+    #[test] fn test_meter_3_4() { let p = generate_meter(3, 2); assert_eq!(p.len(), 6); assert_eq!(p[0], Positive); }
+    #[test] fn test_meter_6_8() { let p = generate_meter(6, 3); assert_eq!(p.len(), 18); assert_eq!(p[0], Positive); assert_eq!(p[9], Positive); }
+
+    // ── Syncopation ────────────────────────────────────────────────
+    #[test] fn test_sync_on_beat() { assert_eq!(syncopation(&[Positive, Neutral, Positive, Neutral]), 0.0); }
+    #[test] fn test_sync_off_beat() { assert!(syncopation(&[Neutral, Positive, Neutral, Positive, Neutral, Positive, Neutral, Positive]) > 0.5); }
+
+    // ── Density ────────────────────────────────────────────────────
+    #[test] fn test_density_half() { assert!((density(&[Positive, Neutral, Positive, Neutral]) - 0.5).abs() < 0.001); }
+    #[test] fn test_density_full() { assert_eq!(density(&[Positive, Positive, Positive, Positive]), 1.0); }
+
+    // ── Swing ──────────────────────────────────────────────────────
+    #[test] fn test_swing_no_change() { assert_eq!(swing(&[Positive, Neutral, Positive, Neutral], 0.0), vec![Positive, Neutral, Positive, Neutral]); }
+
+    // ── Rotate ─────────────────────────────────────────────────────
+    #[test] fn test_rotate_basic() { assert_eq!(rotate(&[Positive, Neutral, Positive, Neutral], 1), vec![Neutral, Positive, Neutral, Positive]); }
+    #[test] fn test_rotate_cycle() { assert_eq!(rotate(&[Positive, Neutral, Neutral], 3), vec![Positive, Neutral, Neutral]); }
+
+    // ── Classify ───────────────────────────────────────────────────
+    #[test] fn test_classify_meter() { assert_eq!(classify(&generate_meter(4, 4)).meter, "4/4"); }
+    #[test] fn test_classify_waltz() { assert_eq!(classify(&generate_meter(3, 2)).genre, "waltz"); }
+
+    // ── Convert ────────────────────────────────────────────────────
+    #[test] fn test_to_from_string() { let s = "X..X..X."; assert_eq!(to_string(&from_string(s)), s); }
+    #[test] fn test_from_string_ghosts() { let p = from_string("X.o.X.o."); assert_eq!(p[0], Positive); assert_eq!(p[2], Negative); }
+
+    // ── Presets ────────────────────────────────────────────────────
+    #[test] fn test_presets() { assert_eq!(presets::tresillo().len(), 8); assert!(presets::rock().len() > 0); }
+
+    // ── Visualize ──────────────────────────────────────────────────
+    #[test] fn test_visualize() { let v = visualize(&[Positive, Neutral, Positive, Neutral], Some("test")); assert!(v.contains('█')); }
+
+    #[test] fn test_visualize_no_label() { let v = visualize(&[Positive, Neutral, Positive, Neutral], None); assert!(!v.is_empty()); }
+    #[test] fn test_euclidean_zero() { assert!(euclidean(3, 0).is_empty()); }
+    #[test] fn test_swing_empty() { assert!(swing(&[], 0.5).is_empty()); }
+    #[test] fn test_rotate_empty() { assert!(rotate(&[], 1).is_empty()); }
+    #[test] fn test_sync_empty() { assert_eq!(syncopation(&[]), 0.0); }
+    #[test] fn test_density_empty() { assert_eq!(density(&[]), 0.0); }
 }
