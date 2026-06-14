@@ -610,3 +610,98 @@ mod tests {
         assert_eq!(lcm_value(0, 5), 0);
     }
 }
+
+// ── Rotation Engine Integration ──────────────────────────────────────────────
+
+/// Attractor-based pattern evolution using the Rotation engine.
+/// Uses the attractor kernel to evolve rhythm patterns toward stable states.
+#[cfg(feature = "simd")]
+pub mod attractor {
+    use crate::{Rhythm, Ternary};
+    use neon_kernel::attractor_step;
+
+    /// Evolve a 64-tick rhythm through the attractor landscape.
+    /// Strong beats (threshold > 0.5) reinforce; weak beats decay to silence.
+    pub fn evolve(pattern: &[f32; 64], threshold: f32) -> Rhythm {
+        let mut output = [0i8; 64];
+        attractor_step(pattern, threshold, &mut output);
+        let mut ternary_pattern = Vec::with_capacity(64);
+        for &v in &output {
+            ternary_pattern.push(match v {
+                1 => Ternary::Pos,
+                -1 => Ternary::Neg,
+                _ => Ternary::Zero,
+            });
+        }
+        Rhythm::new(ternary_pattern)
+    }
+
+    /// Generate a 64-tick rhythm by evolving white noise through the attractor.
+    pub fn generate(seed: f32, threshold: f32) -> Rhythm {
+        let mut values = [0.0f32; 64];
+        let mut rng = (seed.to_bits() as u64).wrapping_mul(6364136223846793005);
+        for v in &mut values {
+            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
+            *v = (rng & 0x7FFF) as f32 / 32768.0 * 2.0 - 1.0;
+        }
+        evolve(&values, threshold)
+    }
+}
+
+/// Fallback for when simd feature is disabled.
+#[cfg(not(feature = "simd"))]
+pub mod attractor {
+    use crate::{Rhythm, Ternary};
+
+    pub fn evolve(pattern: &[f32; 64], threshold: f32) -> Rhythm {
+        let mut ternary_pattern = Vec::with_capacity(64);
+        for &v in pattern {
+            ternary_pattern.push(if v.abs() > threshold {
+                if v > 0.0 { Ternary::Pos } else { Ternary::Neg }
+            } else {
+                Ternary::Zero
+            });
+        }
+        Rhythm::new(ternary_pattern)
+    }
+
+    pub fn generate(seed: f32, threshold: f32) -> Rhythm {
+        let mut values = [0.0f32; 64];
+        let mut rng = (seed.to_bits() as u64).wrapping_mul(6364136223846793005);
+        for v in &mut values {
+            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
+            *v = (rng & 0x7FFF) as f32 / 32768.0 * 2.0 - 1.0;
+        }
+        evolve(&values, threshold)
+    }
+}
+
+#[cfg(test)]
+mod attractor_tests {
+    use super::*;
+
+    #[test]
+    fn test_attractor_evolve_all_strong() {
+        let pattern = [1.0f32; 64];
+        let rhythm = attractor::evolve(&pattern, 0.5);
+        assert_eq!(rhythm.len(), 64);
+        for t in rhythm.pattern {
+            assert_eq!(t, Ternary::Pos);
+        }
+    }
+
+    #[test]
+    fn test_attractor_evolve_all_weak() {
+        let pattern = [0.1f32; 64];
+        let rhythm = attractor::evolve(&pattern, 0.5);
+        for t in rhythm.pattern {
+            assert_eq!(t, Ternary::Zero);
+        }
+    }
+
+    #[test]
+    fn test_attractor_generate_nonempty() {
+        let rhythm = attractor::generate(42.0, 0.3);
+        assert_eq!(rhythm.len(), 64);
+    }
+}
