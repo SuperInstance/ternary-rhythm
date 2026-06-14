@@ -180,7 +180,7 @@ fn cmd_list_presets() {
     println!("  afro_cuban_6_8    — Afro-Cuban 6/8 bell");
 }
 
-fn print_pattern(pattern: &RhythmPattern, label: Option<&str>) {
+fn print_pattern(pattern: &Vec<Ternary>, label: Option<&str>) {
     println!("{}", visualize(pattern, label));
     println!("  String: {}", to_string(pattern));
 }
