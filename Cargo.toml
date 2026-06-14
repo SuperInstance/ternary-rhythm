@@ -1,11 +1,25 @@
 [package]
-repository = "https://github.com/SuperInstance/ternary-rhythm"
 name = "ternary-rhythm"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+repository = "https://github.com/SuperInstance/ternary-rhythm"
+homepage = "https://github.com/SuperInstance/ternary-rhythm"
+description = "Temporal pattern recognition and generation using ternary {-1,0,+1} time patterns"
+keywords = ["rhythm", "euclidean", "ternary", "music", "pattern"]
+categories = ["algorithms", "multimedia::music"]
 license = "MIT"
-description = "Temporal pattern recognition and generation using ternary time patterns"
-neon-kernel = { path = "../the-rotation/crates/neon-kernel", optional = true }
+authors = ["SuperInstance"]
 
 [features]
+default = []
 simd = ["neon-kernel"]
+
+[dependencies]
+neon-kernel = { path = "../the-rotation/crates/neon-kernel", optional = true }
+
+[[bin]]
+name = "ternary-rhythm"
+path = "src/main.rs"
+
+[lints.rust]
+unsafe_code = "forbid"

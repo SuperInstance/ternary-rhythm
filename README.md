@@ -1,80 +1,134 @@
 # ternary-rhythm
 
-[![MIDI Tensor](https://img.shields.io/badge/MIDI-Tensor--Enabled-8B0000?style=flat)](../prototypes/README.md)
-[![Rhythm Engine](https://img.shields.io/badge/Rhythm-Ternary-FF69B4?style=flat)](.)
+[![CI](https://github.com/SuperInstance/ternary-rhythm/actions/workflows/rust.yml/badge.svg)](https://github.com/SuperInstance/ternary-rhythm/actions/workflows/rust.yml)
+[![crates.io](https://img.shields.io/crates/v/ternary-rhythm.svg)](https://crates.io/crates/ternary-rhythm)
+[![docs.rs](https://img.shields.io/docsrs/ternary-rhythm)](https://docs.rs/ternary-rhythm)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Temporal pattern recognition and generation. The pulse that drives everything.**
-
-Temporal pattern recognition and generation using ternary time — rhythm structures, metronomes, polyrhythms, syncopation detection, groove analysis, and rhythmic evolution for ternary-valued temporal coordination.
+Temporal pattern recognition and generation using ternary {-1, 0, +1} time patterns.
 
 Rhythm is the most fundamental musical element. Before melody, before harmony, before timbre — there's rhythm. A pattern of hits and silences that marks time, creates expectation, and resolves it. In ternary, rhythm is a sequence of {-1, 0, +1}: accented (+1), silent (0), or unaccented/ghost (-1).
 
-This crate provides a complete rhythm toolkit: pattern generation (from simple beats to Euclidean algorithms), pattern analysis (syncopation, density, swing), pattern transformation (rotate, invert, permute), and pattern classification (identify the meter, the feel, the genre).
+## Features
 
-## What's Inside
+- **Euclidean rhythm generation** (Björklund's algorithm) — `euclidean(k, n)`
+- **Meter generation** — `generate_meter(beats, note_value)` for 4/4, 3/4, 6/8, etc.
+- **Syncopation analysis** — measure off-beat density
+- **Density measurement** — fraction of non-zero values
+- **Swing transformation** — apply shuffle/swing feel
+- **Pattern rotation** — shift patterns in time
+- **Classification** — detect meter, feel, and likely genre
+- **Visualization** — ASCII art pattern display
+- **Attractor-based evolution** (optional, requires `simd` feature)
+- **Genetic algorithm evolver** — evolve patterns through mutation and selection
+- **No external dependencies** for the core library
+- **57+ tests** covering all functionality
 
-- **`RhythmPattern`** — a sequence of {-1, 0, +1} values representing a rhythmic cycle
-- **`euclidean(k, n)`** — Björklund's algorithm: distribute k hits as evenly as possible in n steps. The math behind every classic rhythm
-- **`generate_meter(beats, subdivisions)`** — generate patterns for common meters (4/4, 3/4, 6/8, 7/8)
-- **`syncopation(pattern)`** — measure how "off-beat" the pattern is. High syncopation = jazz/funk, low = march/polka
-- **`density(pattern)`** — fraction of non-zero values. Sparse (0.2) = minimal techno, dense (0.8) = drum & bass
-- **`swing(pattern, amount)`** — apply swing/shuffle timing. 0 = straight, 1 = full triplet swing
-- **`rotate_beats(pattern, shift)`** — shift the pattern by N beats. New feel, same rhythm
-- **`classify(pattern)`** — identify the meter and feel: 4/4 straight, 3/4 waltz, 6/8 shuffle, etc.
+## Installation
 
-## Quick Example
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ternary-rhythm = "0.2"
+```
+
+## Quick Start
 
 ```rust
 use ternary_rhythm::*;
 
-// Euclidean rhythm: 5 beats in 8 steps (bossa nova)
+// Euclidean rhythm: 5 hits in 8 steps (bossa nova)
 let bossa = euclidean(5, 8);
-// [1, 0, 1, 1, 0, 1, 1, 0]
-
-// Classic 4/4 rock beat
-let rock = generate_meter(4, 4);
-// [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+assert_eq!(bossa.len(), 8);
 
 // Measure syncopation
-let offbeat = RhythmPattern::new(vec![0, 1, 0, 1, 0, 1, 0, 1]);
-let onbeat = RhythmPattern::new(vec![1, 0, 1, 0, 1, 0, 1, 0]);
-println!("Offbeat syncopation: {:.2}", syncopation(&offbeat)); // high
-println!("Onbeat syncopation: {:.2}", syncopation(&onbeat));   // low
+let offbeat = vec![0, 1, 0, 1, 0, 1, 0, 1];
+let onbeat  = vec![1, 0, 1, 0, 1, 0, 1, 0];
+assert!(syncopation(&offbeat) > syncopation(&onbeat));
+
+// Generate a 4/4 rock beat
+let rock = generate_meter(4, 4);
+assert_eq!(rock.len(), 16);
 
 // Apply swing
 let swung = swing(&rock, 0.6);
-// Off-beat hits shift later — the feel changes completely
+assert_eq!(swung.len(), 16);
+
+// Classify
+let class = classify(&tresillo);
+assert_eq!(class.meter, "4/4");
 ```
 
-## The Deeper Truth
-
-**Euclidean rhythms are mathematically optimal.** Björklund's algorithm distributes k hits in n steps as evenly as possible — and the result is almost every important rhythm in world music. E(3,8) = Cuban tresillo. E(5,8) = bossa nova. E(7,12) = West African bell pattern. E(2,3) = every waltz ever. The algorithm doesn't know about music — it just distributes things evenly — and yet it produces the rhythms that cultures around the world independently discovered. There's a deep connection between mathematical evenness and musical satisfaction.
-
-The ternary dimension adds accent levels: +1 = downbeat (the ONE), 0 = silence, -1 = ghost note (quiet hit that fills the space). Ghost notes are what separates a stiff drum machine from a living drummer. They're the whispers between the shouts — felt more than heard. In ternary, they're the -1 values that give the rhythm its *feel* rather than just its *pattern*.
-
-**Use cases:**
-- **Algorithmic composition** — generate rhythm patterns from mathematical rules
-- **Drum machines** — the Euclidean algorithm IS the drum machine
-- **Music education** — teach rhythm theory with the simplest possible representation
-- **Game audio** — adaptive rhythm that responds to gameplay
-- **Dance** — rhythm generation for choreography
-
-## See Also
-
-- **ternary-polyrhythm** — multiple rhythms playing simultaneously
-- **ternary-tempo** — how fast the rhythm plays (BPM)
-- **ternary-fib** — period-8 as the natural ternary rhythm
-- **ternary-jam** — rhythmic improvisation in a jam session
-- **ternary-sync** — Z₃ synchronization (when rhythms lock in)
-- **ternary-phase** — phase relationships between rhythmic layers
-- **ternary-ear** — rhythm recognition training
-
-## Install
+## CLI Usage
 
 ```bash
-cargo add ternary-rhythm
+ternary-rhythm euclidean 3 8     # E(3,8) = tresillo
+ternary-rhythm meter 4 4         # 4/4 meter pattern
+ternary-rhythm analyze "X..X..X."  # Analyze a pattern
+ternary-rhythm swing "X.X.X.X." 0.6  # Apply swing
+ternary-rhythm preset bossa_nova  # Show preset
+ternary-rhythm presets            # List all presets
+```
+
+### Pattern String Notation
+
+| Char | Meaning |
+|------|---------|
+| `X`  | Accented hit (+1) |
+| `o`  | Ghost note (-1) |
+| `.`  | Silence (0) |
+
+## Euclidean Rhythms
+
+The [Euclidean algorithm](https://en.wikipedia.org/wiki/Euclidean_rhythm) distributes `k` beats evenly across `n` steps:
+
+| k | n | Pattern Name | Rhythm |
+|---|---|---|---|
+| 2 | 3 | Waltz | `X.X` |
+| 3 | 4 | — | `XX.X` |
+| 3 | 8 | Tresillo | `X..X..X.` |
+| 4 | 8 | Rhumba | `X.X.X.X.` |
+| 5 | 8 | Bossa Nova | `X.XX.XX.` |
+| 7 | 12 | Afro-Cuban | `X.XX.XX.XX.X` |
+
+## API Overview
+
+### Functions
+
+- `euclidean(k, n)` — Euclidean rhythm generation
+- `generate_meter(beats, note_value)` — Meter generation
+- `syncopation(pattern)` — Syncopation score (0.0–1.0)
+- `density(pattern)` — Density score (0.0–1.0)
+- `swing(pattern, amount)` — Apply swing (0.0–1.0)
+- `rotate(pattern, shift)` — Rotate pattern
+- `classify(pattern)` — Full classification
+- `visualize(pattern, label)` — ASCII art
+- `to_string(pattern)` / `from_string(s)` — Compact string conversion
+
+### Types
+
+- `RhythmPattern` — `Vec<Ternary>` alias
+- `Ternary` — `{-1, 0, +1}` values
+- `Rhythm` — Pattern with position tracking
+- `Metronome` — Beat counter
+- `Polyrhythm` — Multiple rhythms simultaneously
+- `Syncopation` — Syncopation analysis
+- `Groove` — Groove/feel detection
+- `RhythmEvolver` — Genetic algorithm pattern evolution
+- `Classification` — Pattern classification result
+
+### Presets
+
+```rust
+use ternary_rhythm::presets;
+
+let rock = presets::rock();
+let waltz = presets::waltz();
+let bossa = presets::bossa_nova();
+let funk = presets::funk();
 ```
 
 ## License
 
-MIT
+MIT © SuperInstance
